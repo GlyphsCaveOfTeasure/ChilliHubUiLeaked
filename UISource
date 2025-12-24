@@ -174,7 +174,7 @@ local MemberLib = {
         
         local TitleLabel = Instance.new("TextLabel")
         TitleLabel.Parent = TopBar
-        TitleLabel.BackgroundTransparency = 1
+        TitleLabel.BackgroundTransparency = 0
         TitleLabel.Position = UDim2.new(0, 16, 0, 0)
         TitleLabel.Size = UDim2.new(1, -80, 1, 0)
         TitleLabel.Font = GothamBold
