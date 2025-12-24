@@ -219,7 +219,7 @@ local MemberLib = {
         Sidebar.ScrollBarThickness = 2
         Sidebar.BorderSizePixel = 0
         Sidebar.CanvasSize = UDim2.new(0, 0, 0, 0)
-        Sidebar.AutomaticCanvasSize = Enum.AutomaticSize.Y
+        Sidebar.AutomaticCanvasSize = Enum.AutomaticSize.None
         
         local SidebarLayout = Instance.new("UIListLayout", Sidebar)
         SidebarLayout.Padding = UDim.new(0, 6)
@@ -320,25 +320,25 @@ local MemberLib = {
                 local tabs = {}
                 local selectedTab = nil
                 
+                local function updateSidebarCanvas()
+                    Sidebar.CanvasSize = UDim2.new(0, 0, 0, SidebarLayout.AbsoluteContentSize.Y)
+                end
+                
+                -- update canvas if layout changes (so scrolling works)
+                SidebarLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(updateSidebarCanvas)
+                
                 return {
                     Tab = function(tabOptions)
                         local tabName = tabOptions.Title or "Tab"
                         local tabIcon = tabOptions.Image or ""
                         
                         local TabButton = Instance.new("TextButton", Sidebar)
-                        TabButton.Size = UDim2.new(1, -4, 0, 32)
+                        TabButton.Size = UDim2.new(1, -8, 0, 36)
                         TabButton.BackgroundColor3 = COLORS.GrayBlue
                         TabButton.BackgroundTransparency = 1
-                        TabButton.Text = tabName
-                        TabButton.Font = GothamMedium
-                        TabButton.TextSize = 14
-                        TabButton.TextColor3 = COLORS.White
-                        TabButton.TextXAlignment = Enum.TextXAlignment.Left
-                        TabButton.AutoButtonColor = false
-                        TabButton.TextWrapped = false
-                        TabButton.ClipsDescendants = true
-                        TabButton.Padding = Instance.new("UIPadding", TabButton)
-                        TabButton.Padding.PaddingLeft = UDim.new(0, 10)
+                        TabButton.Text = ""
+                        TabButton.AutoButtonColor = true
+                        TabButton.LayoutOrder = #tabs + 1
                         
                         local TabButtonCorner = Instance.new("UICorner", TabButton)
                         TabButtonCorner.CornerRadius = UDim.new(0, 10)
@@ -349,11 +349,22 @@ local MemberLib = {
                         TabButtonStroke.Thickness = 1
                         
                         local TabIndicator = Instance.new("Frame", TabButton)
-                        TabIndicator.Size = UDim2.new(0, 3, 1, -6)
-                        TabIndicator.Position = UDim2.new(0, 1, 0, 3)
+                        TabIndicator.Size = UDim2.new(0, 3, 1, -8)
+                        TabIndicator.Position = UDim2.new(0, 4, 0, 4)
                         TabIndicator.BackgroundColor3 = COLORS.BrightCyan
                         TabIndicator.BorderSizePixel = 0
                         TabIndicator.BackgroundTransparency = 1
+                        
+                        -- Add label so tab name shows
+                        local TabLabel = Instance.new("TextLabel", TabButton)
+                        TabLabel.Size = UDim2.new(1, -12, 1, 0)
+                        TabLabel.Position = UDim2.new(0, 8, 0, 0)
+                        TabLabel.BackgroundTransparency = 1
+                        TabLabel.Text = tabName
+                        TabLabel.Font = GothamMedium
+                        TabLabel.TextSize = 14
+                        TabLabel.TextColor3 = COLORS.White
+                        TabLabel.TextXAlignment = Enum.TextXAlignment.Left
                         
                         local TabContent = Instance.new("ScrollingFrame", ContentArea)
                         TabContent.Size = UDim2.fromScale(1, 1)
@@ -382,10 +393,9 @@ local MemberLib = {
                                     TweenService:Create(otherTab.Button, TweenInfo.new(0.2), {
                                         BackgroundTransparency = 1
                                     }):Play()
+                                    -- hide indicator
                                     if otherTab.Indicator then
-                                        TweenService:Create(otherTab.Indicator, TweenInfo.new(0.2), {
-                                            BackgroundTransparency = 1
-                                        }):Play()
+                                        TweenService:Create(otherTab.Indicator, TweenInfo.new(0.2), {BackgroundTransparency = 1}):Play()
                                     end
                                 end
                             end
@@ -412,23 +422,28 @@ local MemberLib = {
                             
                             selectedTab = {
                                 Button = TabButton,
-                                Content = TabContent
+                                Content = TabContent,
+                                Indicator = TabIndicator
                             }
                         end
                         
                         TabButton.MouseButton1Click:Connect(selectTab)
                         
-                        if #tabs == 0 then
-                            task.wait(0.5)
-                            selectTab()
-                        end
-                        
                         table.insert(tabs, {
                             Button = TabButton,
                             Content = TabContent,
-                            Indicator = TabIndicator,
-                            Select = selectTab
+                            Select = selectTab,
+                            Indicator = TabIndicator
                         })
+                        
+                        -- Update sidebar canvas immediately (and after a short wait for layout)
+                        updateSidebarCanvas()
+                        task.defer(updateSidebarCanvas)
+                        
+                        -- If first tab, auto-select
+                        if #tabs == 1 then
+                            task.delay(0.05, selectTab)
+                        end
                         
                         return {
                             Section = function(sectionOptions)
@@ -681,10 +696,7 @@ local MemberLib = {
                                         
                                         local function updateSlider(newValue)
                                             value = math.clamp(newValue, min, max)
-                                            local percentage = 0
-                                            if max > min then
-                                                percentage = (value - min) / (max - min)
-                                            end
+                                            local percentage = (value - min) / (max - min)
                                             
                                             TweenService:Create(sliderFill, TweenInfo.new(0.1), {
                                                 Size = UDim2.new(percentage, 0, 1, 0)
